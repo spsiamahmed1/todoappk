@@ -1,0 +1,33 @@
+name: Build APK from ZIP
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.zip'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip
+        run: |
+          mkdir project
+          for z in *.zip; do unzip -o "$z" -d project; done
+      - name: Find project
+        id: find
+        run: |
+          F=$(find project -name 'settings.gradle*' | head -1)
+          echo "dir=$(dirname "$F")" >> $GITHUB_OUTPUT
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - run: gradle assembleDebug
+        working-directory: ${{ steps.find.outputs.dir }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: project/**/build/outputs/apk/debug/*.apk
